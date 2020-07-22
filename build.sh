@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 
+[ "$VERBOSE" ] && set -x
+set -e
+set -u
+
 export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"
 export V8_HOME="/home/gerard/git/v8"
 export V8_RELEASE="x64.release.sample"
-
-set -e
-[ "$VERBOSE" ] && set -x
 
 clean() {
 	rm -rf ./bin/
@@ -63,7 +64,7 @@ compile-exec() {
 
 compile-java() {
 	mkdir -p bin/
-	javac src/main/java/nl/melp/v8/V8.java -d bin -h src/main/cpp/include;
+	javac -cp "lib/*"  src/main/java/nl/melp/v8/V8.java -d bin -h src/main/cpp/include;
 }
 
 compile() {
@@ -72,7 +73,7 @@ compile() {
 }
 
 hello() {
-	java -cp bin/ -Djava.library.path=$(cd bin && pwd) nl.melp.v8.V8 $(id -un)
+	java -cp ".:bin/:lib/*" -Djava.library.path=$(cd bin && pwd) nl.melp.v8.V8 $(id -un)
 }
 
 build-all() {

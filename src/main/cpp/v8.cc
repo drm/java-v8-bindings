@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string>
 #include <cassert>
+#include <cstring>
 #include <libplatform/libplatform.h>
 #include <v8.h>
 
@@ -17,6 +18,9 @@ v8::Isolate::CreateParams create_params;
 std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
 v8::Isolate* isolate;
 
+// Temporary scoping fix for FunctionTemplate binding.
+JNIEnv* g_env;
+
 // Extracts a C string from a V8 Utf8Value.
 const char* ToCString(const v8::String::Utf8Value& value) {
   return *value ? *value : "<string conversion failed>";
@@ -25,21 +29,40 @@ const char* ToCString(const v8::String::Utf8Value& value) {
 // The callback that is invoked by v8 whenever the JavaScript 'print'
 // function is called.  Prints its arguments on stdout separated by
 // spaces and ending with a newline.
-void Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  bool first = true;
-  for (int i = 0; i < args.Length(); i++) {
-    v8::HandleScope handle_scope(args.GetIsolate());
-    if (first) {
-      first = false;
-    } else {
-      printf(" ");
-    }
-    v8::String::Utf8Value str(args.GetIsolate(), args[i]);
-    const char* cstr = ToCString(str);
-    printf("%s", cstr);
-  }
-  printf("\n");
-  fflush(stdout);
+//void Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
+//  bool first = true;
+//  for (int i = 0; i < args.Length(); i++) {
+//    v8::HandleScope handle_scope(args.GetIsolate());
+//    if (first) {
+//      first = false;
+//    } else {
+//      printf(" ");
+//    }
+//    v8::String::Utf8Value str(args.GetIsolate(), args[i]);
+//    const char* cstr = ToCString(str);
+//    printf("%s", cstr);
+//  }
+//  printf("\n");
+//  fflush(stdout);
+//}
+
+// The callback that is invoked by v8 whenever the JavaScript 'print'
+// function is called.  Prints its arguments on stdout separated by
+// spaces and ending with a newline.
+void javaCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  JNIEnv* env = g_env;
+  assert(env != NULL);
+
+  jclass cls = env->FindClass("nl/melp/v8/V8");
+  jmethodID mid = env->GetStaticMethodID(cls, "recv", "(Ljava/lang/String;)Ljava/lang/String;");
+
+  v8::EscapableHandleScope handle_scope(args.GetIsolate());
+  v8::String::Utf8Value str(args.GetIsolate(), args[0]);
+  jstring result = (jstring)env->CallStaticObjectMethod(cls, mid, env->NewStringUTF(ToCString(str)));
+
+  const char* cstr = env->GetStringUTFChars(result, 0);
+  args.GetReturnValue().Set(handle_scope.Escape(v8::String::NewFromUtf8(isolate, cstr, v8::NewStringType::kNormal).ToLocalChecked()));
+  env->ReleaseStringUTFChars(result, cstr);
 }
 
 //// Executes a string within the current v8 context.
@@ -184,67 +207,12 @@ void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
 }
 
 
-// Creates a new execution environment containing the built-in
-// functions.
-v8::Local<v8::Context> CreateShellContext(v8::Isolate* isolate) {
-  // Create a template for the global object.
-  v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate);
-  // Bind the global 'print' function to the C++ Print callback.
-  global->Set(
-      v8::String::NewFromUtf8(isolate, "print", v8::NewStringType::kNormal)
-          .ToLocalChecked(),
-      v8::FunctionTemplate::New(isolate, Print));
-//  // Bind the global 'read' function to the C++ Read callback.
-//  global->Set(v8::String::NewFromUtf8(
-//                  isolate, "read", v8::NewStringType::kNormal).ToLocalChecked(),
-//              v8::FunctionTemplate::New(isolate, Read));
-//  // Bind the global 'load' function to the C++ Load callback.
-//  global->Set(v8::String::NewFromUtf8(
-//                  isolate, "load", v8::NewStringType::kNormal).ToLocalChecked(),
-//              v8::FunctionTemplate::New(isolate, Load));
-//  // Bind the 'quit' function
-//  global->Set(v8::String::NewFromUtf8(
-//                  isolate, "quit", v8::NewStringType::kNormal).ToLocalChecked(),
-//              v8::FunctionTemplate::New(isolate, Quit));
-//  // Bind the 'version' function
-//  global->Set(
-//      v8::String::NewFromUtf8(isolate, "version", v8::NewStringType::kNormal)
-//          .ToLocalChecked(),
-//      v8::FunctionTemplate::New(isolate, Version));
-
-  return v8::Context::New(isolate, NULL, global);
-}
-
-void helloworld()
-{
-	v8::Isolate::Scope isolate_scope(isolate);
-	v8::HandleScope handle_scope(isolate);
-	v8::Local<v8::Context> context = CreateShellContext(isolate);
-    v8::Context::Scope context_scope(context);
-
-	runScript("java('Hello');", context, platform.get());
-}
-
-
 void _v8_dispose() {
   // Dispose the isolate and tear down V8.
   isolate->Dispose();
   v8::V8::Dispose();
   v8::V8::ShutdownPlatform();
   delete create_params.array_buffer_allocator;
-}
-
-JNIEXPORT void JNICALL Java_nl_melp_v8_V8_sayHello__
-	(JNIEnv* env, jobject thisObject)
-{
-	helloworld();
-	helloworld();
-}
-
-JNIEXPORT void JNICALL Java_nl_melp_v8_V8_sayHello__Ljava_lang_String_2
-	(JNIEnv* env, jobject thisObject, jstring name)
-{
-    std::cout << "Hello from C++, " << env->GetStringUTFChars(name, NULL) << "!!" << std::endl;
 }
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
@@ -257,26 +225,34 @@ void JNI_OnUnload(JavaVM *vm, void *reserved) {
 	_v8_dispose();
 }
 
-//
-//int main(int argc, char* argv[]) {
-//  // Initialize V8.
-//  // Create a new Isolate and make it the current one.
-//
-//}
+/*
+ * Class:     nl_melp_v8_V8
+ * Method:    load
+ * Signature: (Ljava/lang/String;)Ljava/lang/String;
+ */
+JNIEXPORT void JNICALL Java_nl_melp_v8_V8_run
+  (JNIEnv* env, jclass cls, jstring jstr)
+{
+	v8::Isolate::Scope isolate_scope(isolate);
+	v8::HandleScope handle_scope(isolate);
 
-// helloworld.cc:
-//
-//  // Initialize V8.
-//  v8::V8::InitializeICUDefaultLocation(argv[0]);
-//  v8::V8::InitializeExternalStartupData(argv[0]);
-//  std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
-//  v8::V8::InitializePlatform(platform.get());
-//  v8::V8::Initialize();
-//
-//  // { body }
+	g_env = env;
+	// Create a template for the global object.
+	v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate);
+	// Bind the global 'print' function to the C++ Print callback.
+	global->Set(
+	  v8::String::NewFromUtf8(isolate, "__do_call", v8::NewStringType::kNormal)
+		  .ToLocalChecked(),
+	  v8::FunctionTemplate::New(isolate, javaCallback)
+  	);
+	// This is ugly as hell, but for now fixes scope binding to the JavaCall function
 
-//  // Dispose the isolate and tear down V8.
-//  isolate->Dispose();
-//  v8::V8::Dispose();
-//  v8::V8::ShutdownPlatform();
-//  delete create_params.array_buffer_allocator;
+	v8::Local<v8::Context> context = v8::Context::New(isolate, NULL, global);
+    v8::Context::Scope context_scope(context);
+
+	runScript(env->GetStringUTFChars(jstr, NULL), context, platform.get());
+
+	// TODO fix scoping.
+	g_env = NULL;
+}
+

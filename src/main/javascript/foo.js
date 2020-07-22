@@ -9,4 +9,7 @@ const print = (str) => {
 	call("print", [str]);
 }
 
-print("Hello!");
+let i;
+for (i = 0; i < 10000; i ++) {
+	print("Hello!");
+}

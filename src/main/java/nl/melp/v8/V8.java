@@ -1,24 +1,34 @@
 package nl.melp.v8;
 
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 public class V8 {
+	private static Logger logger = LoggerFactory.getLogger(V8.class);
+
 	static {
 		System.loadLibrary("v8bindings");
 	}
 
-	public static void main(String[] args) {
-		final V8 v8 = new V8();
-		v8.sayHello();
-		v8.sayHello(args[0]);
+	public static void main(String[] args) throws IOException {
+		run(Paths.get("src/main/javascript/test.js"));
 	}
 
+	public static void run(Path path) throws IOException {
+		run(Files.readString(path));
+	}
 
-	public native int createContext();
-	public native void disposeContext(int id);
+	public static synchronized String recv(String message) {
+		logger.debug("Got message from v8: " + message);
+		return "{\"wie\": \"Je Moeder!\"}";
+	}
 
-	public native int createIsolate(int contextId);
-	public native int disposeIsolate(int contextId, int isolateId);
-
-	// Declare a native method sayHello() that receives no arguments and returns void
-	private native void sayHello();
-	private native void sayHello(String name);
+	public static synchronized native void run(String script);
+//	public static native String send(String message);
 }
