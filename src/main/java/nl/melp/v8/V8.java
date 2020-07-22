@@ -36,10 +36,6 @@ public class V8 {
 		System.loadLibrary("v8bindings");
 	}
 
-	public static void main(String[] args) throws IOException {
-		run(Paths.get("src/main/javascript/test.js"));
-	}
-
 	public static void run(Path path) throws IOException {
 		run(Files.readString(path));
 	}

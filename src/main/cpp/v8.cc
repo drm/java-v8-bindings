@@ -47,31 +47,29 @@ void runScript(const char *scriptSource, v8::Local<v8::Context> context, v8::Pla
 	// Enter the execution environment before evaluating any code.
 	v8::Isolate* isolate = context->GetIsolate();
 	v8::Context::Scope context_scope(context);
-	v8::Local<v8::String> name(
-	  v8::String::NewFromUtf8(isolate, "(shell)",
-							  v8::NewStringType::kNormal).ToLocalChecked());
+	v8::Local<v8::String> name(v8::String::NewFromUtf8(isolate, "(shell)", v8::NewStringType::kNormal).ToLocalChecked());
 	{
-		  v8::HandleScope handle_scope(isolate);
-          v8::TryCatch try_catch(isolate);
-          v8::ScriptOrigin origin(name);
-          v8::Local<v8::Context> context(isolate->GetCurrentContext());
-          v8::Local<v8::Script> script;
-          if (!v8::Script::Compile(context, v8::String::NewFromUtf8(isolate, scriptSource,
-                                            									v8::NewStringType::kNormal).ToLocalChecked(), &origin).ToLocal(&script)) {
-            // Print errors that happened during compilation.
-            if (report_exceptions)
-              ReportException(isolate, &try_catch);
-          } else {
-            v8::Local<v8::Value> result;
-            if (!script->Run(context).ToLocal(&result)) {
-              assert(try_catch.HasCaught());
-              // Print errors that happened during execution.
-		    if (report_exceptions)
-                ReportException(isolate, &try_catch);
-            } else {
-              assert(!try_catch.HasCaught());
-            }
-          }
+	  v8::HandleScope handle_scope(isolate);
+	  v8::TryCatch try_catch(isolate);
+	  v8::ScriptOrigin origin(name);
+	  v8::Local<v8::Context> context(isolate->GetCurrentContext());
+	  v8::Local<v8::Script> script;
+	  if (!v8::Script::Compile(context, v8::String::NewFromUtf8(isolate, scriptSource,
+																			v8::NewStringType::kNormal).ToLocalChecked(), &origin).ToLocal(&script)) {
+		// Print errors that happened during compilation.
+		if (report_exceptions)
+		  ReportException(isolate, &try_catch);
+	  } else {
+		v8::Local<v8::Value> result;
+		if (!script->Run(context).ToLocal(&result)) {
+		  assert(try_catch.HasCaught());
+		  // Print errors that happened during execution.
+		if (report_exceptions)
+			ReportException(isolate, &try_catch);
+		} else {
+		  assert(!try_catch.HasCaught());
+		}
+	  }
 		while (v8::platform::PumpMessageLoop(platform, context->GetIsolate()))
 		  continue;
 	}

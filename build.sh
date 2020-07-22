@@ -15,16 +15,6 @@ clean() {
 compile-cpp() {
 	mkdir -p bin/
 
-#	g++ -c -fPIC \
-#		-I${JAVA_HOME}/include \
-#		-I${JAVA_HOME}/include/linux \
-#		-I${V8_HOME}/include \
-#		-o bin/v8.o
-#
-#
- #		-Wl,--whole-archive ${V8_HOME}/out.gn/${V8_RELEASE}/obj/libv8_monolith.a -Wl,--no-whole-archive \
-
-
 	# Build shared (.so), including the v8 monolith
 	g++ -shared \
 		-I${JAVA_HOME}/include \
@@ -34,22 +24,6 @@ compile-cpp() {
 		src/main/cpp/v8.cc \
 		-Wl,${V8_HOME}/out.gn/${V8_RELEASE}/obj/libv8_monolith.a \
 		-ldl -pthread -std=c++11 -fPIC
-
-#	g++ \
-#		./samples/shell.cc \
-#		-I${V8_HOME} \
-#		-I${V8_HOME}/include \
-#		-lv8_monolith -L${V8_HOME}/out.gn/${V8_RELEASE}/obj/ \
-#		-pthread \
-#		-o ./shell
-#
-#	g++ \
-#		./samples/exec.cc \
-#		-I${V8_HOME} \
-#		-I${V8_HOME}/include \
-#		-lv8_monolith -L${V8_HOME}/out.gn/${V8_RELEASE}/obj/ \
-#		-pthread \
-#		-o ./exec
 }
 
 compile-exec() {
@@ -72,14 +46,9 @@ compile() {
 	compile-cpp;
 }
 
-hello() {
-	java -cp ".:bin/:lib/*" -Djava.library.path=$(cd bin && pwd) nl.melp.v8.V8 $(id -un)
-}
-
 build-all() {
 	clean
 	compile
-	hello
 }
 
 if [ "$#" -gt 0 ]; then
