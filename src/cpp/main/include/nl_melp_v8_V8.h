@@ -12,8 +12,16 @@ extern "C" {
  * Method:    sayHello
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_nl_melp_v8_V8_sayHello
+JNIEXPORT void JNICALL Java_nl_melp_v8_V8_sayHello__
   (JNIEnv *, jobject);
+
+/*
+ * Class:     nl_melp_v8_V8
+ * Method:    sayHello
+ * Signature: (Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_nl_melp_v8_V8_sayHello__Ljava_lang_String_2
+  (JNIEnv *, jobject, jstring);
 
 #ifdef __cplusplus
 }

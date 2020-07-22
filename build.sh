@@ -10,8 +10,7 @@ clean() {
 
 headers() {
 	(
-		cd src/java/main;
-		javac -h ../../cpp/include nl/melp/v8/V8.java
+		javac -h src/cpp/main/include src/java/main/nl/melp/v8/V8.java
 	)
 }
 
@@ -26,10 +25,7 @@ compile-cpp() {
 
 compile-java() {
 	mkdir -p bin/java/main
-	(
-		cd src/java/main;
-		javac nl/melp/v8/V8.java -d ../../../bin/java/main;
-	)
+	javac src/java/main/nl/melp/v8/V8.java -d bin/java/main;
 }
 
 compile() {
@@ -38,7 +34,7 @@ compile() {
 }
 
 hello() {
-	java -cp bin/java/main -Djava.library.path=$(cd bin/cpp && pwd) nl.melp.v8.V8
+	java -cp bin/java/main -Djava.library.path=$(cd bin/cpp && pwd) nl.melp.v8.V8 $(id -un)
 }
 
 for t in $@; do
