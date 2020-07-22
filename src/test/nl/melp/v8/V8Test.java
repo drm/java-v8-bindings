@@ -10,8 +10,9 @@ public class V8Test {
 	public void testV8() throws IOException {
 		long runs = 1;
 		long tStart = System.nanoTime();
+
 		while (runs -- > 0) {
-			V8.run(Paths.get("src/main/javascript/foo.js"));
+			V8.run(Paths.get("src/main/javascript/test.js"));
 		}
 		long tEnd = System.nanoTime();
 
