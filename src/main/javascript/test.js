@@ -18,4 +18,8 @@ const print = (str) => {
 let i;
 for (i = 0; i < 10000; i ++) {
 	print("Hello!");
+	print(1);
+	print(false);
 }
+
+
